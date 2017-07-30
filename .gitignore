@@ -1,0 +1,10 @@
+*.exe
+*.dll
+*.lib
+*.exp
+*.layout
+*.depend
+
+obj/
+bin/
+doc/
