@@ -56,6 +56,8 @@
 
 /// Pixel accuracy factor (for more exact integer computations)
 #define PIXEL_ACCURACY	(4)
+/// Animated pattern detail level (Increases the smoothness of the curve)
+#define PATTERN_DETAIL	(2)
 /// Animated chart detail level (Increases the smoothness of the curve)
 #define CHART_DETAIL	(3)
 
@@ -123,13 +125,18 @@ void drawAnimatedPattern(TR2CONTEXT *ctx, TEXTURE *txr, int halfRowCount, unsign
 						 short deformWavePhase, short shortWavePhase, short longWavePhase)
 {
 	int halfColCount = mulDiv(halfRowCount, *ctx->pScreenWidth*3, *ctx->pScreenHeight*4)+1;
+
+	halfRowCount *= PATTERN_DETAIL;
+	halfColCount *= PATTERN_DETAIL;
+
 	int countY = halfRowCount*2+1;
 	int countX = halfColCount*2+1;
 	int tileSize = mulDiv(*ctx->pScreenHeight, 2*PIXEL_ACCURACY, 3*halfRowCount);
-	int tileRadius = mulDiv(tileSize, amplitude, 100);
+	int tileRadius = mulDiv(tileSize, amplitude*PATTERN_DETAIL, 100);
 	int baseY = *ctx->pScreenHeight*PIXEL_ACCURACY/2 - halfRowCount*tileSize;
 	int baseX = *ctx->pScreenWidth*PIXEL_ACCURACY/2  - halfColCount*tileSize;
 	VERTEX2D *vertices = malloc(sizeof(VERTEX2D)*countX*countY);
+	TEXTURE subTxr;
 
 	deformWavePhase += SHORT_WAVE_X_OFFSET;
 	shortWavePhase  += SHORT_WAVE_X_OFFSET;
@@ -149,14 +156,18 @@ void drawAnimatedPattern(TR2CONTEXT *ctx, TEXTURE *txr, int halfRowCount, unsign
 			vtx->y = ((float)(baseY + tileSize*j + intSin(deformWaveRowPhase)*tileRadius/0x4000)) / PIXEL_ACCURACY;
 			vtx->x = ((float)(baseX + tileSize*i + intCos(deformWaveRowPhase)*tileRadius/0x4000)) / PIXEL_ACCURACY;
 
-			deformWaveRowPhase += SHORT_WAVE_Y_STEP;
-			shortWaveRowPhase  += SHORT_WAVE_Y_STEP;
-			longWaveRowPhase   += LONG_WAVE_Y_STEP;
+			deformWaveRowPhase += SHORT_WAVE_Y_STEP / PATTERN_DETAIL;
+			shortWaveRowPhase  += SHORT_WAVE_Y_STEP / PATTERN_DETAIL;
+			longWaveRowPhase   += LONG_WAVE_Y_STEP  / PATTERN_DETAIL;
 		}
-		deformWavePhase += SHORT_WAVE_X_STEP;
-		shortWavePhase  += SHORT_WAVE_X_STEP;
-		longWavePhase   += LONG_WAVE_X_STEP;
+		deformWavePhase += SHORT_WAVE_X_STEP / PATTERN_DETAIL;
+		shortWavePhase  += SHORT_WAVE_X_STEP / PATTERN_DETAIL;
+		longWavePhase   += LONG_WAVE_X_STEP  / PATTERN_DETAIL;
 	}
+
+	subTxr.handle = txr->handle;
+	subTxr.width  = txr->width  / PATTERN_DETAIL;
+	subTxr.height = txr->height / PATTERN_DETAIL;
 
 	for( int i=0; i<halfColCount*2; ++i ) {
 		for( int j=0; j<halfRowCount*2; ++j ) {
@@ -164,7 +175,9 @@ void drawAnimatedPattern(TR2CONTEXT *ctx, TEXTURE *txr, int halfRowCount, unsign
 			VERTEX2D *vtx1 = &vertices[(i+1)*countY+(j+0)];
 			VERTEX2D *vtx2 = &vertices[(i+0)*countY+(j+1)];
 			VERTEX2D *vtx3 = &vertices[(i+1)*countY+(j+1)];
-			renderTexturedFarQuad(ctx, vtx0, vtx1, vtx2, vtx3, txr);
+			subTxr.x = txr->x + (i%PATTERN_DETAIL)*subTxr.width;
+			subTxr.y = txr->y + (j%PATTERN_DETAIL)*subTxr.height;
+			renderTexturedFarQuad(ctx, vtx0, vtx1, vtx2, vtx3, &subTxr);
 		}
 	}
 	free(vertices);
